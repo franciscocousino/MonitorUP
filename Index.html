@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor de Uptime Corporativo</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --green: #16a34a;
+      --yellow: #ca8a04;
+      --red: #dc2626;
+      --blue: #2563eb;
+      --shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.1;
+    }
+
+    .title p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 720px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .summary-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .summary-value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .toolbar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: 1.2fr repeat(4, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 11px 12px;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background: var(--border);
+    }
+
+    .card.status-green::before { background: var(--green); }
+    .card.status-yellow::before { background: var(--yellow); }
+    .card.status-red::before { background: var(--red); }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .app-name {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+    }
+
+    .badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: var(--panel-soft);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .badge.crit-alta { color: #991b1b; background: #fef2f2; border-color: #fecaca; }
+    .badge.crit-media { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+    .badge.crit-baixa { color: #166534; background: #f0fdf4; border-color: #bbf7d0; }
+
+    .status-area {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 110px;
+      justify-content: flex-end;
+    }
+
+    .status-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 5px rgba(15, 23, 42, 0.04);
+    }
+
+    .status-green-dot { background: var(--green); }
+    .status-yellow-dot { background: var(--yellow); }
+    .status-red-dot { background: var(--red); }
+
+    .status-text {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .counter {
+      font-size: 34px;
+      font-weight: 700;
+      margin: 12px 0 2px;
+      letter-spacing: 0.4px;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .details {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      font-size: 14px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .row span:first-child {
+      color: var(--muted);
+      min-width: 120px;
+    }
+
+    .row strong {
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .legend {
+      margin-top: 24px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .empty-state {
+      background: var(--panel);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 30px;
+      text-align: center;
+      color: var(--muted);
+      box-shadow: var(--shadow);
+    }
+
+    @media (max-width: 980px) {
+      .toolbar {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .toolbar,
+      .summary-grid,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .counter { font-size: 28px; }
+      .app-name { font-size: 18px; }
+      .status-area { min-width: auto; }
+      .row { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="title">
+        <h1>Monitor de Uptime Corporativo</h1>
+        <p>Painel interno para acompanhamento do status das aplicações, com criticidade, ambiente, dono, ordenação e indicadores consolidados.</p>
+      </div>
+      <div class="meta">
+        <div class="pill">Atualização automática: <strong id="refreshInterval">30s</strong></div>
+        <div class="pill">Última atualização: <strong id="lastRefresh">--</strong></div>
+        <div class="pill">Fonte: <strong>Verificação via navegador</strong></div>
+      </div>
+    </div>
+
+    <div class="summary-grid" id="summaryGrid">
+      <div class="summary-card">
+        <div class="summary-label">Total monitorado</div>
+        <div class="summary-value" id="sumTotal">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Aplicações UP</div>
+        <div class="summary-value" id="sumUp">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Instáveis</div>
+        <div class="summary-value" id="sumWarn">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Indisponíveis</div>
+        <div class="summary-value" id="sumDown">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Críticas em alerta</div>
+        <div class="summary-value" id="sumCriticalIssues">0</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="field">
+        <label for="searchInput">Pesquisar aplicação</label>
+        <input id="searchInput" type="text" placeholder="Digite nome, ambiente ou dono" />
+      </div>
+      <div class="field">
+        <label for="envFilter">Ambiente</label>
+        <select id="envFilter">
+          <option value="todos">Todos</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="statusFilter">Status</label>
+        <select id="statusFilter">
+          <option value="todos">Todos</option>
+          <option value="green">UP</option>
+          <option value="yellow">Instável</option>
+          <option value="red">Down</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="criticalityFilter">Criticidade</label>
+        <select id="criticalityFilter">
+          <option value="todos">Todas</option>
+          <option value="alta">Alta</option>
+          <option value="media">Média</option>
+          <option value="baixa">Baixa</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="sortBy">Ordenar por</label>
+        <select id="sortBy">
+          <option value="criticidade-status">Criticidade + status</option>
+          <option value="nome">Nome</option>
+          <option value="ambiente">Ambiente</option>
+          <option value="tempo-status">Tempo no status</option>
+          <option value="resposta">Tempo de resposta</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="appGrid" class="grid"></div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="status-dot status-green-dot"></span> Verde = operação normal</div>
+      <div class="legend-item"><span class="status-dot status-yellow-dot"></span> Amarelo = instável, degradado ou resposta lenta</div>
+      <div class="legend-item"><span class="status-dot status-red-dot"></span> Vermelho = indisponível, timeout ou falha de requisição</div>
+    </div>
+  </div>
+
+  <script>
+    // ==================================================
+    // CONFIGURAÇÃO DAS APLICAÇÕES MONITORADAS
+    // ==================================================
+    // Você pode adicionar ou remover aplicações neste array.
+    // Em um próximo passo, isso pode vir de JSON/API externa.
+    // IMPORTANTE: em SharePoint/HTML puro, os endpoints precisam aceitar CORS
+    // ou estar acessíveis no mesmo contexto de rede/navegador.
+    const applications = [
+      {
+        id: 'portal-cac',
+        nome: 'Portal CAC',
+        ambiente: 'Produção',
+        criticidade: 'alta',
+        dono: 'Operações',
+        url: 'https://portal.kardbank.com.br/cac/com.web.loginkdb',
+        metodo: 'GET',
+        timeoutMs: 5000,
+        warningMs: 2000,
+        exibirEndpoint: false,
+        status: 'yellow',
+        statusDesde: new Date(),
+        ultimoTempoResposta: null,
+        ultimaMensagem: 'Aguardando primeira verificação',
+        ultimaMudanca: new Date(),
+        totalFalhas: 0
+      },
+      {
+        id: 'motor-credito',
+        nome: 'Motor de Crédito',
+        ambiente: 'Produção',
+        criticidade: 'alta',
+        dono: 'Crédito',
+        url: 'https://fkdb-kscore.vercel.app/login?redirect=%2Fdashboard',
+        metodo: 'GET',
+        timeoutMs: 5000,
+        warningMs: 2000,
+        exibirEndpoint: false,
+        status: 'yellow',
+        statusDesde: new Date(),
+        ultimoTempoResposta: null,
+        ultimaMensagem: 'Aguardando primeira verificação',
+        ultimaMudanca: new Date(),
+        totalFalhas: 0
+      },
+      {
+        id: 'sistema-funcao',
+        nome: 'Sistema Função',
+        ambiente: 'Produção',
+        criticidade: 'media',
+        dono: 'Financeiro',
+        url: 'https://portal.konectpay.com.br',
+        metodo: 'GET',
+        timeoutMs: 5000,
+        warningMs: 2500,
+        exibirEndpoint: false,
+        status: 'yellow',
+        statusDesde: new Date(),
+        ultimoTempoResposta: null,
+        ultimaMensagem: 'Aguardando primeira verificação',
+        ultimaMudanca: new Date(),
+        totalFalhas: 0
+      }
+    ];
+
+    const refreshEveryMs = 30000;
+    const storageKey = 'uptime-monitor-state-v2';
+
+    function formatDateTime(date) {
+      return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'medium'
+      }).format(date);
+    }
+
+    function formatDuration(ms) {
+      const safeMs = Math.max(0, ms || 0);
+      const totalSeconds = Math.floor(safeMs / 1000);
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      const dd = String(days).padStart(2, '0');
+      const hh = String(hours).padStart(2, '0');
+      const mm = String(minutes).padStart(2, '0');
+      const ss = String(seconds).padStart(2, '0');
+
+      return `${dd}d ${hh}:${mm}:${ss}`;
+    }
+
+    function statusLabel(status) {
+      if (status === 'green') return 'UP';
+      if (status === 'yellow') return 'INSTÁVEL';
+      return 'DOWN';
+    }
+
+    function criticidadeLabel(criticidade) {
+      if (criticidade === 'alta') return 'Alta criticidade';
+      if (criticidade === 'media') return 'Média criticidade';
+      return 'Baixa criticidade';
+    }
+
+    function statusDotClass(status) {
+      if (status === 'green') return 'status-green-dot';
+      if (status === 'yellow') return 'status-yellow-dot';
+      return 'status-red-dot';
+    }
+
+    function restorePersistedState() {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return;
+        const persisted = JSON.parse(raw);
+
+        for (const app of applications) {
+          const saved = persisted[app.id];
+          if (!saved) continue;
+          app.status = saved.status || app.status;
+          app.statusDesde = saved.statusDesde ? new Date(saved.statusDesde) : app.statusDesde;
+          app.ultimoTempoResposta = saved.ultimoTempoResposta ?? app.ultimoTempoResposta;
+          app.ultimaMensagem = saved.ultimaMensagem || app.ultimaMensagem;
+          app.ultimaMudanca = saved.ultimaMudanca ? new Date(saved.ultimaMudanca) : app.ultimaMudanca;
+          app.totalFalhas = saved.totalFalhas || 0;
+        }
+      } catch (error) {
+        console.warn('Não foi possível restaurar o estado persistido.', error);
+      }
+    }
+
+    function persistState() {
+      try {
+        const payload = {};
+        for (const app of applications) {
+          payload[app.id] = {
+            status: app.status,
+            statusDesde: app.statusDesde,
+            ultimoTempoResposta: app.ultimoTempoResposta,
+            ultimaMensagem: app.ultimaMensagem,
+            ultimaMudanca: app.ultimaMudanca,
+            totalFalhas: app.totalFalhas
+          };
+        }
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch (error) {
+        console.warn('Não foi possível persistir o estado.', error);
+      }
+    }
+
+    function buildCard(app) {
+      return `
+        <div class="card status-${app.status}" id="card-${app.id}">
+          <div class="card-top">
+            <div>
+              <h2 class="app-name">${app.nome}</h2>
+              <div class="badges">
+                <span class="badge">${app.ambiente}</span>
+                <span class="badge crit-${app.criticidade}">${criticidadeLabel(app.criticidade)}</span>
+                <span class="badge">Dono: ${app.dono}</span>
+              </div>
+            </div>
+            <div class="status-area">
+              <span class="status-dot ${statusDotClass(app.status)}"></span>
+              <span class="status-text">${statusLabel(app.status)}</span>
+            </div>
+          </div>
+          <div class="counter" id="counter-${app.id}">${formatDuration(Date.now() - app.statusDesde.getTime())}</div>
+          <div class="sub">Tempo no status atual</div>
+          <div class="details">
+            <div class="row">
+              <span>Último tempo de resposta</span>
+              <strong id="response-${app.id}">${app.ultimoTempoResposta != null ? app.ultimoTempoResposta + ' ms' : '--'}</strong>
+            </div>
+            <div class="row">
+              <span>Última verificação</span>
+              <strong id="check-${app.id}">--</strong>
+            </div>
+            <div class="row">
+              <span>Última mudança</span>
+              <strong id="change-${app.id}">${formatDateTime(app.ultimaMudanca)}</strong>
+            </div>
+            <div class="row">
+              <span>Total de falhas</span>
+              <strong id="failures-${app.id}">${app.totalFalhas}</strong>
+            </div>
+            ${app.exibirEndpoint ? `
+            <div class="row">
+              <span>Endpoint</span>
+              <strong>${app.url}</strong>
+            </div>` : ''}
+            <div class="row">
+              <span>Detalhe</span>
+              <strong id="message-${app.id}">${app.ultimaMensagem}</strong>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function populateFilters() {
+      const envFilter = document.getElementById('envFilter');
+      const ambientes = [...new Set(applications.map(app => app.ambiente))].sort();
+      envFilter.innerHTML = '<option value="todos">Todos</option>' + ambientes.map(env => `<option value="${env}">${env}</option>`).join('');
+    }
+
+    function criticalityRank(value) {
+      if (value === 'alta') return 1;
+      if (value === 'media') return 2;
+      return 3;
+    }
+
+    function statusRank(value) {
+      if (value === 'red') return 1;
+      if (value === 'yellow') return 2;
+      return 3;
+    }
+
+    function getFilteredAndSortedApps() {
+      const term = document.getElementById('searchInput').value.trim().toLowerCase();
+      const env = document.getElementById('envFilter').value;
+      const status = document.getElementById('statusFilter').value;
+      const crit = document.getElementById('criticalityFilter').value;
+      const sortBy = document.getElementById('sortBy').value;
+
+      let result = [...applications].filter(app => {
+        const matchesTerm = !term || [app.nome, app.ambiente, app.dono, app.criticidade].join(' ').toLowerCase().includes(term);
+        const matchesEnv = env === 'todos' || app.ambiente === env;
+        const matchesStatus = status === 'todos' || app.status === status;
+        const matchesCrit = crit === 'todos' || app.criticidade === crit;
+        return matchesTerm && matchesEnv && matchesStatus && matchesCrit;
+      });
+
+      result.sort((a, b) => {
+        if (sortBy === 'nome') return a.nome.localeCompare(b.nome, 'pt-BR');
+        if (sortBy === 'ambiente') return a.ambiente.localeCompare(b.ambiente, 'pt-BR') || a.nome.localeCompare(b.nome, 'pt-BR');
+        if (sortBy === 'tempo-status') return (b.statusDesde.getTime() - a.statusDesde.getTime());
+        if (sortBy === 'resposta') return ((a.ultimoTempoResposta ?? Number.MAX_SAFE_INTEGER) - (b.ultimoTempoResposta ?? Number.MAX_SAFE_INTEGER));
+        return criticalityRank(a.criticidade) - criticalityRank(b.criticidade) || statusRank(a.status) - statusRank(b.status) || a.nome.localeCompare(b.nome, 'pt-BR');
+      });
+
+      return result;
+    }
+
+    function renderCards() {
+      const grid = document.getElementById('appGrid');
+      const appsToRender = getFilteredAndSortedApps();
+      document.getElementById('refreshInterval').textContent = `${refreshEveryMs / 1000}s`;
+
+      if (!appsToRender.length) {
+        grid.innerHTML = '<div class="empty-state">Nenhuma aplicação encontrada com os filtros atuais.</div>';
+        updateSummary([]);
+        return;
+      }
+
+      grid.innerHTML = appsToRender.map(buildCard).join('');
+      updateSummary(appsToRender);
+    }
+
+    function updateSummary(apps) {
+      const source = apps.length ? apps : getFilteredAndSortedApps();
+      const total = source.length;
+      const up = source.filter(app => app.status === 'green').length;
+      const warn = source.filter(app => app.status === 'yellow').length;
+      const down = source.filter(app => app.status === 'red').length;
+      const criticalIssues = source.filter(app => app.criticidade === 'alta' && app.status !== 'green').length;
+
+      document.getElementById('sumTotal').textContent = total;
+      document.getElementById('sumUp').textContent = up;
+      document.getElementById('sumWarn').textContent = warn;
+      document.getElementById('sumDown').textContent = down;
+      document.getElementById('sumCriticalIssues').textContent = criticalIssues;
+    }
+
+    function updateCard(app) {
+      const card = document.getElementById(`card-${app.id}`);
+      if (!card) return;
+
+      card.className = `card status-${app.status}`;
+      const dot = card.querySelector('.status-dot');
+      const statusText = card.querySelector('.status-text');
+
+      dot.className = `status-dot ${statusDotClass(app.status)}`;
+      statusText.textContent = statusLabel(app.status);
+      document.getElementById(`response-${app.id}`).textContent = app.ultimoTempoResposta != null ? `${app.ultimoTempoResposta} ms` : '--';
+      document.getElementById(`check-${app.id}`).textContent = formatDateTime(new Date());
+      document.getElementById(`change-${app.id}`).textContent = formatDateTime(app.ultimaMudanca);
+      document.getElementById(`failures-${app.id}`).textContent = app.totalFalhas;
+      document.getElementById(`message-${app.id}`).textContent = app.ultimaMensagem;
+    }
+
+    async function testarAplicacao(app) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), app.timeoutMs);
+      const startedAt = performance.now();
+
+      try {
+        const response = await fetch(app.url, {
+          method: app.metodo,
+          cache: 'no-store',
+          signal: controller.signal,
+          credentials: 'omit'
+        });
+
+        const elapsed = Math.round(performance.now() - startedAt);
+        clearTimeout(timeout);
+
+        let novoStatus = 'green';
+        let mensagem = `HTTP ${response.status}`;
+
+        if (!response.ok) {
+          novoStatus = 'red';
+          mensagem = `Erro HTTP ${response.status}`;
+        } else if (elapsed > app.warningMs) {
+          novoStatus = 'yellow';
+          mensagem = `Lento (${elapsed} ms)`;
+        }
+
+        aplicarNovoStatus(app, novoStatus, elapsed, mensagem);
+      } catch (error) {
+        clearTimeout(timeout);
+        const mensagem = error.name === 'AbortError' ? 'Timeout' : 'Falha na requisição / CORS / DNS';
+        aplicarNovoStatus(app, 'red', null, mensagem);
+      }
+    }
+
+    function aplicarNovoStatus(app, novoStatus, tempoResposta, mensagem) {
+      if (app.status !== novoStatus) {
+        app.status = novoStatus;
+        app.statusDesde = new Date();
+        app.ultimaMudanca = new Date();
+      }
+
+      if (novoStatus === 'red') {
+        app.totalFalhas += 1;
+      }
+
+      app.ultimoTempoResposta = tempoResposta;
+      app.ultimaMensagem = mensagem;
+      persistState();
+      renderCards();
+      updateCard(app);
+    }
+
+    function atualizarContadores() {
+      const appsToRender = getFilteredAndSortedApps();
+      for (const app of appsToRender) {
+        const counter = document.getElementById(`counter-${app.id}`);
+        if (counter) {
+          counter.textContent = formatDuration(Date.now() - app.statusDesde.getTime());
+        }
+      }
+    }
+
+    async function cicloMonitoramento() {
+      await Promise.all(applications.map(testarAplicacao));
+      document.getElementById('lastRefresh').textContent = formatDateTime(new Date());
+      renderCards();
+    }
+
+    function bindEvents() {
+      ['searchInput', 'envFilter', 'statusFilter', 'criticalityFilter', 'sortBy'].forEach(id => {
+        document.getElementById(id).addEventListener('input', renderCards);
+        document.getElementById(id).addEventListener('change', renderCards);
+      });
+    }
+
+    restorePersistedState();
+    populateFilters();
+    bindEvents();
+    renderCards();
+    cicloMonitoramento();
+    setInterval(cicloMonitoramento, refreshEveryMs);
+    setInterval(atualizarContadores, 1000);
+  </script>
+</body>
+</html>
